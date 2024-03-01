@@ -1,0 +1,110 @@
+---
+# Source: content-web/templates/serviceaccount.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: release-name-content-web
+  labels:
+    helm.sh/chart: content-web-0.1.0
+    app.kubernetes.io/name: content-web
+    app.kubernetes.io/instance: release-name
+    app.kubernetes.io/version: "1.16.0"
+    app.kubernetes.io/managed-by: Helm
+---
+# Source: content-web/templates/service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: release-name-content-web
+  labels:
+    helm.sh/chart: content-web-0.1.0
+    app.kubernetes.io/name: content-web
+    app.kubernetes.io/instance: release-name
+    app.kubernetes.io/version: "1.16.0"
+    app.kubernetes.io/managed-by: Helm
+spec:
+  type: LoadBalancer
+  ports:
+    - port: 3000
+      targetPort: http
+      protocol: TCP
+      name: http
+  selector:
+    app.kubernetes.io/name: content-web
+    app.kubernetes.io/instance: release-name
+---
+# Source: content-web/templates/deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: release-name-content-web
+  labels:
+    helm.sh/chart: content-web-0.1.0
+    app.kubernetes.io/name: content-web
+    app.kubernetes.io/instance: release-name
+    app.kubernetes.io/version: "1.16.0"
+    app.kubernetes.io/managed-by: Helm
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: content-web
+      app.kubernetes.io/instance: release-name
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: content-web
+        app.kubernetes.io/instance: release-name
+    spec:
+      serviceAccountName: release-name-content-web
+      securityContext:
+        {}
+      containers:
+        - name: content-web
+          securityContext:
+            {}
+          image: "whatthehackmsft/content-web:latest"
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: CONTENT_API_URL
+              value: http://release-name-content-api:3001
+          ports:
+            - name: http
+              containerPort: 3000
+              protocol: TCP
+          livenessProbe:
+            httpGet:
+              path: /
+              port: http
+          readinessProbe:
+            httpGet:
+              path: /
+              port: http
+          resources:
+            limits:
+              cpu: 100m
+              memory: 128Mi
+            requests:
+              cpu: 100m
+              memory: 128Mi
+---
+# Source: content-web/templates/tests/test-connection.yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: "release-name-content-web-test-connection"
+  labels:
+    helm.sh/chart: content-web-0.1.0
+    app.kubernetes.io/name: content-web
+    app.kubernetes.io/instance: release-name
+    app.kubernetes.io/version: "1.16.0"
+    app.kubernetes.io/managed-by: Helm
+  annotations:
+    "helm.sh/hook": test
+spec:
+  containers:
+    - name: wget
+      image: busybox
+      command: ['wget']
+      args: ['release-name-content-web:3000']
+  restartPolicy: Never
